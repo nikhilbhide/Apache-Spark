@@ -1,0 +1,4 @@
+val inputfile = sc.textFile("/user/cloudera/word-count/input/word_count.txt")
+val counts = inputfile.flatMap(line => line.split(" ")).map(word => (word, 1)).reduceByKey(_+_);
+counts.collect()
+counts.saveAsTextFile("user/cloudera/word_count/output1")
