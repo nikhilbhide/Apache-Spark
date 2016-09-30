@@ -24,12 +24,12 @@ object WikiPediaAnalytics {
 		//create spark configuration
 		val sparkConf = new SparkConf().setAppName("My Spark Job").setMaster("local")
 				//create sparik conctext
-				val sparkContext = new SparkContext(sparkConf)
+		val sparkContext = new SparkContext(sparkConf)
 		//create rdd of line read from wiki pages 
-		val rddWikiPage = sparkContext.textFile("/home/cloudera/Hadoop/Data/WikiPedia/pagecounts-20160101-000000 (1).gz")
-		rddWikiPage.take(100).foreach (println)
-		rddWikiPage.cache()
-		println("size of document is : " + rddWikiPage.count())
+		val wikiPageRDD = sparkContext.textFile("/home/cloudera/Hadoop/Data/WikiPedia/pagecounts-20160101-000000 (1).gz")
+		wikiPageRDD.take(100).foreach (println)
+		wikiPageRDD.cache()
+		println("size of document is : " + wikiPageRDD.count())
 
 		//initialize spark sql context
 		val sqlcontext = new org.apache.spark.sql.SQLContext(sparkContext)
@@ -38,18 +38,19 @@ object WikiPediaAnalytics {
 		import sqlcontext.implicits._
 
 		//convert rdd to data frame
-		val wordCountDF = rddWikiPage.flatMap ((new Parser).parseLine)
+		val wikiPageDF = wikiPageRDD.flatMap ((new Parser).parseLine)
 		.toDF()
 		//convert data frame to data set		                            
-		val wordCountDS = wordCountDF.as[Edit]
-		println(wordCountDS.count())
+		val wikiPageDS = wikiPageDF.as[Edit]
+		println(wikiPageDS.count())
 		//find top 100 pages by hits
-		wordCountDS.filter(e=>(e.project=="en") && (!e.pageTitle.contains(":")) && (!e.pageTitle.startsWith(".")))
+		wikiPageDS.filter(e=>(e.project=="en") && (!e.pageTitle.contains(":")) && (!e.pageTitle.startsWith(".")))
 	          	 .groupBy("pageTitle")
 				       .agg(sum("numRequests").name("totalRequests"))
 				       .sort(desc("totalRequests"))
 				       .take(100)
 				       .foreach{e=>println(e(0) + "-"+e(1))
+		wikiPageDS.registerTempTable("wikipages")
 		}
 	}
 }
